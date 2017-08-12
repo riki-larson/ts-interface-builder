@@ -1,0 +1,111 @@
+import { ObjectAttributes, ObjectInfo } from './object/object-info';
+
+const CLASS_NAME_REGEX = /\s*export\s*interface\s([\S]+)\s*{/;
+
+export function parseTypescript(typescriptAsString: string): Promise<string> {
+    let lines: string[] = typescriptAsString.split('\n');
+    let objectInfo: ObjectInfo = new Parser(lines).process();
+    let builderAsString: string = new BuilderAsString(objectInfo).process()
+    return Promise.resolve(builderAsString);
+}
+
+class Parser {
+
+    constructor(private lines: string[]) { }
+
+    private objectInfo: ObjectInfo = new ObjectInfo();
+
+    public process(): ObjectInfo {
+        this.lines.forEach(element => this.parserLine(element));
+        return this.objectInfo;
+    }
+
+    public parserLine(line: string) {
+        this.parseClassName(line);
+        this.parseAttributes(line);
+    }
+
+    public parseClassName(line: string) {
+        let result = new RegExp(CLASS_NAME_REGEX).exec(line);
+        if (result) {
+            console.log(result[1])
+            this.objectInfo.className = result[1]
+        }
+    }
+
+    public parseAttributes(line: string) {
+        let result = new RegExp(/(\w+):\s+(\w+);/).exec(line);
+        if (result) {
+            console.log(result[1])
+            console.log(result[2])
+            let attributeName = result[1]
+            let attributeType = result[2]
+            this.objectInfo.addAttributes(attributeName, attributeType);
+        }
+    }
+}
+
+const SAUT = '\n'
+class BuilderAsString {
+
+    constructor(private objectInfo: ObjectInfo) { }
+
+    private name:string="";
+
+    process(): string {
+        this.name = this.objectInfo.className + "Builder";
+        return [
+            "export class " + this.name + " {"
+            + SAUT
+            + this.addAttributes()
+            + this.addConstructor(this.name)
+            + this.addSetters()
+            + "}"].join(SAUT)
+    }
+
+    addConstructor(name): string {
+        return SAUT
+            + "private constructor(){}"
+            + SAUT
+            + SAUT
+            + ["public static getNew(): " + name + " { "
+                , "return new " + name + "();"
+                , "}"
+            ].join(SAUT)
+            + SAUT+ SAUT
+            + ["public build(): "+this.objectInfo.className+" {"
+                , "return {"
+                , this.objectInfo.attributs.map(a => "\"" + a.name + "\": this." + a.name + ",").join(SAUT)
+                , "}"
+                , "}"
+            ].join(SAUT)
+            + SAUT
+    }
+
+    addAttributes() {
+        return SAUT
+            + this.objectInfo.attributs.map(attribute => this.addAttribute(attribute)).join(SAUT)
+            + SAUT;
+    }
+
+    addAttribute(attribute: ObjectAttributes): string {
+        return "private " + attribute.name + ": " + attribute.type + " = " + attribute.getDefaultValue() + ";";
+    }
+
+    addSetters() {
+        return SAUT
+            + this.objectInfo.attributs.map(attribute => this.addSetter(attribute)).join(SAUT)
+            + SAUT;
+    }
+
+    addSetter(attribute) {
+        return ["public with" + this.capitalize(attribute.name) + "(v: " + attribute.type + "): "+this.name+" {"
+            , "this." + attribute.name + "=v;"
+            , "return this;"
+            , "}"].join(SAUT)+ SAUT
+    }
+
+    capitalize(string){
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+}
