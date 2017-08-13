@@ -34,7 +34,7 @@ class Parser {
     }
 
     public parseAttributes(line: string) {
-        let result = new RegExp(/(\w+):\s+(\w+);/).exec(line);
+        let result = new RegExp(/(\w+):\s+(\w+[0-9]*\[*\]*);/).exec(line);
         if (result) {
             console.log(result[1])
             console.log(result[2])
@@ -50,7 +50,7 @@ class BuilderAsString {
 
     constructor(private objectInfo: ObjectInfo) { }
 
-    private name:string="";
+    private name: string = "";
 
     process(): string {
         this.name = this.objectInfo.className + "Builder";
@@ -61,19 +61,33 @@ class BuilderAsString {
             + this.addConstructor(this.name)
             + this.addSetters()
             + "}"].join(SAUT)
+
+            + this.genererClassTest()
     }
 
     addConstructor(name): string {
         return SAUT
             + "private constructor(){}"
             + SAUT
+
             + SAUT
-            + ["public static getNew(): " + name + " { "
+            + ["public static creer(): " + name + " { "
                 , "return new " + name + "();"
                 , "}"
             ].join(SAUT)
-            + SAUT+ SAUT
-            + ["public build(): "+this.objectInfo.className+" {"
+            + SAUT
+
+            + SAUT
+            + ["public static creerDepuisExistant( existant :" + this.objectInfo.className + "): " + name + " { "
+                , "let builder = new " + name + "();"
+                , this.objectInfo.attributs.map(attribut => attribut.getAffectation()).join(SAUT)
+                , "return builder;"
+                , "}"
+            ].join(SAUT)
+            + SAUT
+
+            + SAUT
+            + ["public build(): " + this.objectInfo.className + " {"
                 , "return {"
                 , this.objectInfo.attributs.map(a => "\"" + a.name + "\": this." + a.name + ",").join(SAUT)
                 , "}"
@@ -82,30 +96,58 @@ class BuilderAsString {
             + SAUT
     }
 
+
+
     addAttributes() {
         return SAUT
-            + this.objectInfo.attributs.map(attribute => this.addAttribute(attribute)).join(SAUT)
+            + this.objectInfo.attributs.map(attribute => attribute.getField()).join(SAUT)
             + SAUT;
-    }
-
-    addAttribute(attribute: ObjectAttributes): string {
-        return "private " + attribute.name + ": " + attribute.type + " = " + attribute.getDefaultValue() + ";";
     }
 
     addSetters() {
         return SAUT
-            + this.objectInfo.attributs.map(attribute => this.addSetter(attribute)).join(SAUT)
+            + this.objectInfo.attributs.map(attribute => attribute.addSetter(this.name)).join(SAUT)
             + SAUT;
     }
 
-    addSetter(attribute) {
-        return ["public with" + this.capitalize(attribute.name) + "(v: " + attribute.type + "): "+this.name+" {"
-            , "this." + attribute.name + "=v;"
-            , "return this;"
-            , "}"].join(SAUT)+ SAUT
+
+    genererClassTest(): string {
+        return SAUT
+            + "const " + this.objectInfo.className.toUpperCase() + ": " + this.objectInfo.className + " = null; //TODO"
+            + SAUT+ SAUT +["describe(\'" + this.name + "\', () => {"
+                , this.genererTestCreer()
+                , this.objectInfo.attributs.map(a => this.ajouterTest(a)).join(SAUT)
+                , SAUT
+                , "})"].join(SAUT);
     }
 
-    capitalize(string){
-        return string.charAt(0).toUpperCase() + string.slice(1);
+    genererTestCreer(): string {
+        return [
+            "it(\'creer\', () => {"
+            , "let " + this.objectInfo.getClassNameVariable() + ": " + this.objectInfo.className + " = " + this.name + ".creerDepuisExistant(" + this.objectInfo.className.toUpperCase() + ")"
+            , this.genererSettersComplets()
+            , ".build();"
+            , "expect("+this.objectInfo.getClassNameVariable()+").to.exist;"
+            , "});"
+        ].join(SAUT)
+    }
+
+    genererSettersComplets(): string{
+        return this.objectInfo.attributs.map(attribut => this.genererSetter(attribut)).join(SAUT)
+    }
+    genererSetter(attribut: ObjectAttributes){
+        return "." + attribut.getNomSetter() + "("+this.objectInfo.className.toUpperCase()+"."+attribut.name+")";
+    }
+
+    ajouterTest(a: ObjectAttributes): string {
+        return SAUT + [
+            "it(\'" + a.getNomSetter() + "\', () => {"
+            , "let valeur: " + a.getSansTableau() + " = null; //TODO"
+            , "let " + this.objectInfo.getClassNameVariable() + ": " + this.objectInfo.className + " = " + this.name + ".creerDepuisExistant(" + this.objectInfo.className.toUpperCase() + ")"
+            , "." + a.getNomSetter() + "(valeur)"
+            , ".build();"
+            , a.createExpect(this.objectInfo.className, this.objectInfo.getClassNameVariable())
+            , "});"
+        ].join(SAUT) + SAUT
     }
 }

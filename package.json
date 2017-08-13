@@ -2,7 +2,7 @@
     "name": "ts-interface-builder",
     "displayName": "TS interface builder",
     "description": "Typescript interfaces to builder of interface",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "publisher": "riki-larson",
     "icon": "icon.jpg",
     "keywords": [
@@ -20,24 +20,14 @@
     "main": "./out/src/index",
     "contributes": {
         "commands": [{
-                    "command": "tsInterfaceToBuilder.fromSelection",
-                    "title": "TS interface builder: Convert from selection"
-                },
-                {
-                    "command": "tsInterfaceToBuilder.fromClipboard",
-                    "title": "TS interface builder: Convert from clipboard"
-                }
-            ]
-            /*,
-            "keybindings": [{
-                    "command": "tsInterfaceToBuilder.fromClipboard",
-                    "key": "ctrl+alt+V"
-                },
-                {
-                    "command": "tsInterfaceToBuilder.fromSelection",
-                    "key": "ctrl+alt+S"
-                }
-            ]*/
+                "command": "tsInterfaceToBuilder.fromSelection",
+                "title": "TS interface builder: Convert from selection"
+            },
+            {
+                "command": "tsInterfaceToBuilder.fromClipboard",
+                "title": "TS interface builder: Convert from clipboard"
+            }
+        ]
     },
     "author": "",
     "repository": {

@@ -12,8 +12,8 @@ const UA: UniversalAnalytics = require('universal-analytics')
 const visitor = UA('UA-97872528-2', getUserId())
 
 export function activate(context: ExtensionContext) {
-  context.subscriptions.push(commands.registerCommand('jsonToTs.fromSelection', transformFromSelection));
-  context.subscriptions.push(commands.registerCommand('jsonToTs.fromClipboard', transformFromClipboard));
+  context.subscriptions.push(commands.registerCommand('tsInterfaceToBuilder.fromSelection', transformFromSelection));
+  context.subscriptions.push(commands.registerCommand('tsInterfaceToBuilder.fromClipboard', transformFromClipboard));
 }
 
 function transformFromSelection () {
